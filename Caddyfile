@@ -30,6 +30,12 @@
 		basic_auth {
 			{$ADMIN_USERNAME} {$ADMIN_PASSWORD_HASH}
 		}
-		reverse_proxy 127.0.0.1:9119
+		reverse_proxy 127.0.0.1:9119 {
+			# Hermes dashboard runs uvicorn with a Host-header check
+			# (anti-DNS-rebinding): it rejects requests whose Host
+			# doesn't match the bind address with 400 "Invalid Host
+			# header". Rewrite Host to the upstream's host:port.
+			header_up Host {upstream_hostport}
+		}
 	}
 }
