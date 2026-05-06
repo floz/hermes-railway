@@ -3,15 +3,19 @@
 #
 # Runs as the unprivileged `hermes` user (UID 10000) after the upstream
 # entrypoint has bootstrapped the /opt/data volume and dropped privileges
-# via gosu. The dashboard has already been launched in background on
-# 127.0.0.1:9119 by the upstream entrypoint (HERMES_DASHBOARD=1).
+# via gosu.
 #
 # Steps:
 #   1. Validate required env vars.
 #   2. Bcrypt-hash the admin password and export for Caddy.
-#   3. Launch hermes gateway (Telegram/Discord/Slack/...) in background.
-#   4. Launch Caddy reverse proxy in background.
-#   5. wait -n: if any process exits, propagate code → container restart.
+#   3. Launch hermes dashboard on 127.0.0.1:9119 (background, loopback only).
+#   4. Launch hermes gateway (Telegram/Discord/Slack/...) in background.
+#   5. Launch Caddy reverse proxy in background.
+#   6. wait -n: if any process exits, propagate code → container restart.
+#
+# We launch the dashboard ourselves rather than relying on the upstream
+# entrypoint's HERMES_DASHBOARD=1 feature — that logic only exists on
+# upstream main, not in pinned releases like v2026.4.30.
 
 set -e
 
@@ -34,8 +38,14 @@ cleanup() {
 }
 trap cleanup EXIT TERM INT
 
+# Dashboard binds to loopback only — never reachable from internet without
+# going through Caddy's basic_auth. No --insecure flag needed (which would
+# only be required to bind to 0.0.0.0).
+echo "[start] Launching hermes dashboard on 127.0.0.1:9119 (background)..."
+hermes dashboard --host 127.0.0.1 --port 9119 --no-open 2>&1 | sed -u 's/^/[dashboard] /' &
+
 echo "[start] Launching hermes gateway (background)..."
-hermes gateway run &
+hermes gateway run 2>&1 | sed -u 's/^/[gateway] /' &
 
 echo "[start] Launching Caddy reverse proxy on :${PORT} (background)..."
 caddy run --config /etc/caddy/Caddyfile --adapter caddyfile &

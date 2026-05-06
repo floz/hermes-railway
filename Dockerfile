@@ -27,13 +27,6 @@ COPY Caddyfile /etc/caddy/Caddyfile
 COPY start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-# Tell upstream entrypoint to launch the dashboard in background on loopback.
-# When HERMES_DASHBOARD_HOST is 127.0.0.1, the entrypoint does NOT add
-# --insecure (which would expose API keys on the network).
-ENV HERMES_DASHBOARD=1 \
-    HERMES_DASHBOARD_HOST=127.0.0.1 \
-    HERMES_DASHBOARD_PORT=9119
-
 # Keep Caddy state ephemeral (out of /opt/data volume — would just pollute it).
 ENV XDG_DATA_HOME=/tmp/caddy-data \
     XDG_CONFIG_HOME=/tmp/caddy-config
