@@ -1,0 +1,35 @@
+# Caddy reverse proxy: protects the Hermes dashboard with HTTP basic_auth
+# (bcrypt) and exposes /healthz for Railway's healthcheck.
+#
+# Env vars (exported by start.sh before `caddy run`):
+#   PORT                 — Railway-provided listen port
+#   ADMIN_USERNAME       — basic_auth username
+#   ADMIN_PASSWORD_HASH  — bcrypt hash of the password (generated at boot)
+#
+# {$VAR} placeholders are interpolated by Caddy itself at config load time —
+# NOT by shell envsubst. This matters because bcrypt hashes contain `$`.
+
+{
+	auto_https off
+	admin off
+	persist_config off
+}
+
+:{$PORT} {
+	log {
+		output stdout
+		format console
+		level INFO
+	}
+
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	handle {
+		basic_auth {
+			{$ADMIN_USERNAME} {$ADMIN_PASSWORD_HASH}
+		}
+		reverse_proxy 127.0.0.1:9119
+	}
+}

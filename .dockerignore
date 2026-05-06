@@ -1,0 +1,13 @@
+.git
+.gitignore
+.dockerignore
+.env
+.env.*
+!.env.example
+README.md
+LICENSE
+*.log
+__pycache__
+*.pyc
+.DS_Store
+node_modules
